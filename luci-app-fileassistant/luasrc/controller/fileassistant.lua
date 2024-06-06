@@ -8,7 +8,8 @@ function index()
     page = entry({"admin", "nas", "fileassistant"}, template("fileassistant"), _("文件助手"), 1)
     page.i18n = "base"
     page.dependent = true
-
+    page.acl_depends = { "luci-app-fileassistant" }
+    
     page = entry({"admin", "nas", "fileassistant", "list"}, call("fileassistant_list"), nil)     
     page.leaf = true
 
@@ -118,18 +119,15 @@ function installIPK(filepath)
 end
 
 function fileassistant_upload()
+    local filecontent = luci.http.formvalue("upload-file")
+    local filename = luci.http.formvalue("upload-filename")
+    local uploaddir = luci.http.formvalue("upload-dir")
+    local filepath = uploaddir..filename
+
     local fp
-    -- MUST setfilehandler before formvalue,
-    -- beacuse formvalue will parse form and write body to /tmp if filehandler not present
     luci.http.setfilehandler(
         function(meta, chunk, eof)
             if not fp and meta and meta.name == "upload-file" then
-                local filename = luci.http.formvalue("upload-filename")
-                local uploaddir = luci.http.formvalue("upload-dir")
-                if not uploaddir or not filename then
-                    error("uploaddir or filename is nil")
-                end
-                local filepath = uploaddir..filename
                 fp = io.open(filepath, "w")
             end
             if fp and chunk then
@@ -141,7 +139,7 @@ function fileassistant_upload()
       end
     )
 
-    list_response(luci.http.formvalue("upload-dir"), true)
+    list_response(uploaddir, true)
 end
 
 function fileassistant_mkdir()
